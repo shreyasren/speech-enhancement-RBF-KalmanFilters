@@ -4,16 +4,19 @@ Main experiment pipeline for Speech Enhancement and Recognition using RBF-Kalman
 This script recreates the experiments from the paper:
 "Speech Enhancement and Recognition using Kalman Filter Modified via Radial Basis Function"
 by Mario Barnard, Farag M. Lagnf, Amr S. Mahmoud, Mohamed Zohdy (2020)
+
+This version works with pre-recorded audio files only (no microphone recording).
 """
 
 import numpy as np
 import os
 import sys
+import soundfile as sf
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from audio_utils import AudioRecorder, AudioProcessor, create_dataset_structure
+from audio_utils import AudioProcessor, create_dataset_structure
 from rbf import RadialBasisFunction, create_rbf_for_kalman
 from kalman_filter import KalmanFilterSpeech, enhance_speech_rbf_kalman
 from envelope_detection import EnvelopeDetector, detect_envelope, remove_silence_from_signal
@@ -40,7 +43,6 @@ class SpeechEnhancementExperiment:
         self.ar_order = ar_order
 
         # Initialize components
-        self.recorder = AudioRecorder(sample_rate, duration)
         self.processor = AudioProcessor(sample_rate)
         self.envelope_detector = EnvelopeDetector()
         self.recognizer = CorrelationSpeechRecognizer()
@@ -53,40 +55,6 @@ class SpeechEnhancementExperiment:
         # Database
         self.database = {}
         self.words = ['Hello', 'Estimation', 'Oakland']
-
-    def record_database(self, num_people=3):
-        """
-        Record speech database from multiple people.
-
-        Args:
-            num_people: Number of different speakers
-        """
-        print("=" * 60)
-        print("RECORDING DATABASE")
-        print("=" * 60)
-
-        for person_id in range(1, num_people + 1):
-            print(f"\n--- Person {person_id} ---")
-            input(f"Press Enter when Person {person_id} is ready to record...")
-
-            for word in self.words:
-                key = f"{word}_person{person_id}"
-                message = f"Say '{word}'"
-
-                # Record
-                audio = self.recorder.record(message)
-
-                # Normalize
-                audio = self.processor.normalize(audio)
-
-                # Save raw recording
-                filename = os.path.join(self.paths['raw'], f"{key}.wav")
-                self.recorder.save(filename, audio)
-
-                # Store in database
-                self.database[key] = audio
-
-        print(f"\nRecorded {len(self.database)} samples")
 
     def load_database_from_files(self):
         """
@@ -153,7 +121,7 @@ class SpeechEnhancementExperiment:
 
             # Save enhanced signal
             filename = os.path.join(self.paths['database'], f"{key}_enhanced.wav")
-            self.recorder.save(filename, enhanced_signal)
+            sf.write(filename, enhanced_signal, self.sample_rate)
 
             enhanced_database[key] = {
                 'clean': clean_signal,
@@ -203,7 +171,7 @@ class SpeechEnhancementExperiment:
 
             # Save voiced signal
             filename = os.path.join(self.paths['processed'], f"{key}_voiced.wav")
-            self.recorder.save(filename, voiced_signal)
+            sf.write(filename, voiced_signal, self.sample_rate)
 
         return voiced_database
 
@@ -232,21 +200,41 @@ class SpeechEnhancementExperiment:
             count = len(self.recognizer.database[word])
             print(f"  {word}: {count} samples")
 
-    def test_recognition(self, test_word, snr_db=10):
+    def test_recognition(self, test_word, test_file=None, snr_db=10):
         """
-        Test speech recognition with a new recording.
+        Test speech recognition with a test file.
 
         Args:
             test_word: Word to test
+            test_file: Path to test audio file (if None, will look in data/test/)
             snr_db: SNR for added noise
         """
         print("\n" + "=" * 60)
         print(f"TESTING RECOGNITION: {test_word}")
         print("=" * 60)
 
-        # Record test signal
-        print(f"\nRecording test signal for '{test_word}'")
-        test_signal = self.recorder.record(f"Say '{test_word}'")
+        # Load test signal
+        if test_file is None:
+            test_file = os.path.join(self.paths['test'], f"{test_word}_test.wav")
+        
+        if not os.path.exists(test_file):
+            print(f"Error: Test file not found: {test_file}")
+            print(f"Please provide a valid test file path.")
+            return None
+
+        print(f"\nLoading test signal from: {test_file}")
+        test_signal, sr = self.processor.load_audio(test_file)
+        
+        if test_signal is None:
+            print("Error loading test file")
+            return None
+
+        # Resample if needed
+        if sr != self.sample_rate:
+            test_signal = self.processor.resample(test_signal, sr, self.sample_rate)
+
+        # Normalize
+        test_signal = self.processor.normalize(test_signal)
 
         # Normalize
         test_signal = self.processor.normalize(test_signal)
@@ -280,7 +268,7 @@ class SpeechEnhancementExperiment:
         # Save test signal
         test_key = f"test_{test_word}"
         filename = os.path.join(self.paths['test'], f"{test_key}.wav")
-        self.recorder.save(filename, enhanced_test)
+        sf.write(filename, enhanced_test, self.sample_rate)
 
         return {
             'test_signal': test_signal,
@@ -381,21 +369,17 @@ def main():
         ar_order=10
     )
 
-    # Choose mode
-    print("\nChoose mode:")
-    print("1. Record new database")
-    print("2. Load existing database")
-    choice = input("Enter choice (1 or 2): ").strip()
-
-    if choice == '1':
-        # Record database
-        exp.record_database(num_people=3)
-    else:
-        # Load existing database
-        exp.load_database_from_files()
+    # Load existing database from files
+    print("\nLoading audio database from data/raw/...")
+    exp.load_database_from_files()
 
     if not exp.database:
-        print("No database available. Exiting.")
+        print("\n" + "=" * 60)
+        print("ERROR: No audio files found in data/raw/")
+        print("=" * 60)
+        print("\nPlease ensure audio files exist in data/raw/")
+        print("You can run 'generate_synthetic_data.py' to create sample data:")
+        print("  python3 generate_synthetic_data.py")
         return
 
     # Enhance database
@@ -410,28 +394,38 @@ def main():
     # Visualize results
     exp.visualize_results(enhanced_db, voiced_db)
 
-    # Test recognition
+    # Test recognition (if test files exist)
     print("\n" + "=" * 60)
     print("SPEECH RECOGNITION TEST")
     print("=" * 60)
-
-    test_mode = input("\nTest recognition? (y/n): ").strip().lower()
-
-    if test_mode == 'y':
+    
+    test_available = False
+    for word in exp.words:
+        test_file = os.path.join(exp.paths['test'], f"{word}_test.wav")
+        if os.path.exists(test_file):
+            test_available = True
+            break
+    
+    if test_available:
         for word in exp.words:
-            test_again = input(f"\nTest word '{word}'? (y/n): ").strip().lower()
-            if test_again == 'y':
-                result = exp.test_recognition(word, snr_db=10)
-
-                # Visualize recognition result
-                exp.visualizer.plot_recognition_results(
-                    result['voiced'],
-                    result['recognized_corr'],
-                    result['confidence_corr'],
-                    result['scores_corr'],
-                    exp.sample_rate,
-                    save_path=os.path.join(exp.paths['results'], f'recognition_test_{word}.png')
-                )
+            test_file = os.path.join(exp.paths['test'], f"{word}_test.wav")
+            if os.path.exists(test_file):
+                print(f"\nTesting word: {word}")
+                result = exp.test_recognition(word, test_file=test_file, snr_db=10)
+                
+                if result is not None:
+                    # Visualize recognition result
+                    exp.visualizer.plot_recognition_results(
+                        result['voiced'],
+                        result['recognized_corr'],
+                        result['confidence_corr'],
+                        result['scores_corr'],
+                        exp.sample_rate,
+                        save_path=os.path.join(exp.paths['results'], f'recognition_test_{word}.png')
+                    )
+    else:
+        print("\nNo test files found in data/test/")
+        print("Skipping recognition testing.")
 
     print("\n" + "=" * 60)
     print("EXPERIMENT COMPLETE")

@@ -1,69 +1,12 @@
 """
-Audio utilities for recording, loading, and preprocessing speech signals.
+Audio utilities for loading and preprocessing speech signals.
 """
 
 import numpy as np
-import sounddevice as sd
 import soundfile as sf
 from scipy.io import wavfile
 from scipy import signal as sp_signal
 import os
-
-
-class AudioRecorder:
-    """
-    Record audio signals from microphone.
-    """
-
-    def __init__(self, sample_rate=44100, duration=3.0):
-        """
-        Initialize audio recorder.
-
-        Args:
-            sample_rate: Sampling rate in Hz
-            duration: Recording duration in seconds
-        """
-        self.sample_rate = sample_rate
-        self.duration = duration
-
-    def record(self, message="Recording..."):
-        """
-        Record audio from microphone.
-
-        Args:
-            message: Message to display during recording
-
-        Returns:
-            recording: Recorded audio signal
-        """
-        print(f"{message} ({self.duration} seconds)")
-
-        # Record audio
-        recording = sd.rec(
-            int(self.duration * self.sample_rate),
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype='float32'
-        )
-        sd.wait()
-
-        # Convert to 1D array
-        recording = recording.flatten()
-
-        print("Recording complete.")
-
-        return recording
-
-    def save(self, filename, audio):
-        """
-        Save audio to file.
-
-        Args:
-            filename: Output filename
-            audio: Audio signal to save
-        """
-        sf.write(filename, audio, self.sample_rate)
-        print(f"Saved: {filename}")
 
 
 class AudioProcessor:
@@ -234,40 +177,3 @@ def create_dataset_structure(base_dir="data"):
 
     return paths
 
-
-def record_dataset(words=['Hello', 'Estimation', 'Oakland'], num_people=3, sample_rate=44100, duration=3.0):
-    """
-    Record dataset of words from multiple people.
-
-    Args:
-        words: List of words to record
-        num_people: Number of different people
-        sample_rate: Sampling rate
-        duration: Recording duration per word
-
-    Returns:
-        recordings: Dictionary of recordings
-    """
-    recorder = AudioRecorder(sample_rate=sample_rate, duration=duration)
-    paths = create_dataset_structure()
-
-    recordings = {}
-
-    for person_id in range(1, num_people + 1):
-        print(f"\n--- Person {person_id} ---")
-        input(f"Press Enter when Person {person_id} is ready to record...")
-
-        for word in words:
-            key = f"{word}_person{person_id}"
-            message = f"Say '{word}'"
-
-            # Record
-            audio = recorder.record(message)
-
-            # Save
-            filename = os.path.join(paths['raw'], f"{key}.wav")
-            recorder.save(filename, audio)
-
-            recordings[key] = audio
-
-    return recordings, paths
