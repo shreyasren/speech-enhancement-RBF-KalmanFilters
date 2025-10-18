@@ -38,13 +38,6 @@ This system performs **speech enhancement** (noise reduction) and **speech recog
 
 The paper's core contribution is using an RBF network to **non-linearly estimate** the process noise covariance (Q parameter) in the Kalman filter, rather than using a fixed value. This allows the filter to adapt to varying noise conditions.
 
-### What You Get
-
-✅ **Complete Paper Implementation**
-- All 7 figures from the paper can be reproduced
-- Exact algorithms as described in the paper
-- Same experimental setup
-
 ✅ **Enhanced Methods Beyond Paper**
 - Adaptive Kalman filter with time-varying parameters
 - Spectral subtraction preprocessing
