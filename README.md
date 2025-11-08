@@ -131,43 +131,34 @@ Creates 9 synthetic speech samples (3 words × 3 speakers):
 - Sample rate: 44.1 kHz
 - Output: \`data/raw/*.wav\`
 
-### 2. Run Main Demonstration Pipeline
-
-\`\`\`bash
-python3 main.py
-\`\`\`
-
-Demonstrates the complete pipeline:
-- Loads audio samples
-- Enhances signals using RBF-Kalman filter
-- Applies envelope detection (VAD)
-- Builds recognition database
-- Trains multi-layer RBF classifier
-- Performs recognition tests with correlation, DTW, and RBF methods
-- Generates visualizations
-
-**Purpose**: Single demonstration showing all components working together (1 SNR level, white noise)
-
-### 3. Run Comprehensive Validation Experiments
+### 2. Run Complete Validation Pipeline
 
 ```bash
-python3 run_advanced_experiments.py
+python3 main.py
 ```
 
-**This is the main validation script** that systematically tests all three core improvements:
+**This is the main script** that comprehensively tests all three core improvements:
 
-✅ **Task 1**: 4 noise types (white, fan, street, ambient)  
-✅ **Task 2**: Contextual features vs. baseline  
-✅ **Task 3**: Multi-layer RBF classifier evaluation
+✅ **Experiment 1**: 4 noise types (white, fan, street, ambient)  
+✅ **Experiment 2**: Multi-layer RBF classifier for speech recognition  
+✅ **Experiment 3**: Baseline vs contextual features comparison  
 
 Tests across:
 - 4 noise types × 4 SNR levels (5, 10, 15, 20 dB) × 2 methods = **32 test conditions**
 - Comprehensive performance analysis with detailed metrics
 - Side-by-side comparisons of baseline vs. enhanced methods
 - Speech recognition with multi-layer RBF classifier
+- Complete visualizations and results
+
+**What it does:**
+- Loads audio samples from `data/raw/`
+- Tests noise type comparison (white, fan, street, ambient)
+- Trains and evaluates multi-layer RBF classifier
+- Compares enhancement methods (baseline vs contextual features)
+- Generates visualizations and metrics
 
 **Results**: All figures and metrics saved in `data/results/`  
-**Note**: This script validates that the repository improvements actually work better than the original paper's approach
+**Note**: This validates that the repository improvements work better than the original paper's approach
 
 ---
 
@@ -182,8 +173,8 @@ speech-enhancement-RBF-KalmanFilters/
 │
 ├── Main Scripts
 │   ├── generate_synthetic_data.py  # Create test data
-│   ├── main.py                     # Demonstration pipeline
-│   └── run_advanced_experiments.py # Comprehensive validation (32 test conditions)
+│   ├── main.py                     # Complete validation pipeline (32 test conditions)
+│   └── generate_synthetic_data.py  # Optional: Generate test audio samples
 │
 ├── Source Modules (src/)
 │   ├── __init__.py
@@ -536,22 +527,22 @@ python3 main.py
 
 ### Comprehensive Validation Experiments
 
-\`\`\`bash
-python3 run_advanced_experiments.py
-\`\`\`
+```bash
+python3 main.py
+```
 
-**Purpose**: Systematically validates that all 3 improvement tasks actually work
+**Purpose**: Comprehensively validates that all 3 improvement tasks actually work
 
 **Tests** (32 conditions total):
-- ✅ **Task 1**: All 4 noise types (white, fan, street, ambient)
-- ✅ **Task 2**: Baseline vs. contextual features comparison
-- ✅ **Task 3**: Multi-layer RBF classifier training and evaluation
+- ✅ **Experiment 1**: All 4 noise types (white, fan, street, ambient)
+- ✅ **Experiment 2**: Multi-layer RBF classifier training and evaluation
+- ✅ **Experiment 3**: Baseline vs. contextual features comparison
 - 4 SNR levels: 5, 10, 15, 20 dB
 - Side-by-side baseline vs. enhanced comparisons
 
 **Output**:
-- \`data/results/advanced_noise_comparison.png\` - Noise type comparison across SNR levels
-- \`data/results/advanced_results_summary.txt\` - Detailed metrics for all 32 conditions
+- `data/results/advanced_noise_comparison.png` - Noise type comparison across SNR levels
+- `data/results/advanced_results_summary.txt` - Detailed metrics for all 32 conditions
 - Performance tables showing improvement over baseline
 
 **Why This Matters**: The original paper concluded "RBF found no positive effects." This script proves that with proper implementation (4 noise types + contextual features + multi-layer classifier), the approach **does work** and provides significant improvements.
@@ -787,7 +778,7 @@ This is an educational implementation for research purposes. The original paper 
 For questions or issues:
 1. Check the [Troubleshooting](#troubleshooting) section
 2. Review code comments and docstrings
-3. Examine example scripts (\`main.py\`, \`run_advanced_experiments.py\`)
+3. Examine main script (`main.py`)
 
 ---
 
@@ -809,8 +800,7 @@ pip install -r requirements.txt
 python3 generate_synthetic_data.py
 
 # Run experiments
-python3 main.py                        # Demonstration pipeline
-python3 run_advanced_experiments.py    # Comprehensive validation (32 conditions)
+python3 main.py                        # Complete validation pipeline (32 conditions)
 
 # View results
 ls -lh data/results/
